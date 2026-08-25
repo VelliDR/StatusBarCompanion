@@ -346,7 +346,7 @@ class StatusBarAccessibilityService : AccessibilityService() {
             addAction(ACTION_RELOAD_CHARACTER)
             addAction(ACTION_REQUEST_SCREENSHOT)
         }
-        registerReceiver(systemReceiver, filter, RECEIVER_EXPORTED)
+        registerReceiver(systemReceiver, filter, RECEIVER_NOT_EXPORTED)
     }
 
     private fun unregisterSystemReceiver() {

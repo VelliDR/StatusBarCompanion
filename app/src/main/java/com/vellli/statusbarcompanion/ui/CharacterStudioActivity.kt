@@ -100,7 +100,7 @@ class CharacterStudioActivity : AppCompatActivity() {
         setupListeners()
 
         val filter = IntentFilter(StatusBarAccessibilityService.ACTION_SCREENSHOT_READY)
-        registerReceiver(screenshotReceiver, filter, RECEIVER_EXPORTED)
+        registerReceiver(screenshotReceiver, filter, RECEIVER_NOT_EXPORTED)
 
         // Check if editing existing theme
         val editId = intent.getStringExtra(EXTRA_CHARACTER_ID)
