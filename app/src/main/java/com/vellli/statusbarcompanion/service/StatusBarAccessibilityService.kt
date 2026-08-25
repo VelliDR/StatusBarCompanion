@@ -317,12 +317,19 @@ class StatusBarAccessibilityService : AccessibilityService() {
                     rightMargin = (element.offsetX * density).toInt() 
                 }
                 imageView.layoutParams = lp
+                
+                val newTag = "${imagePath}_${sizePx}"
+                val currentTag = imageView.tag as? String
 
-                imageView.load(File(imagePath), imageLoader) {
-                    crossfade(false)
-                    size(sizePx)
+                if (currentTag != newTag) {
+                    imageView.tag = newTag
+                    imageView.load(File(imagePath), imageLoader) {
+                        crossfade(false)
+                        size(sizePx)
+                    }
                 }
             } else {
+                imageView.tag = null
                 imageView.setImageDrawable(null)
             }
         }
