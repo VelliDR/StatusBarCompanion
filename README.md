@@ -37,6 +37,11 @@ Kendi tasarımlarınızı, karakterlerinizi ve animasyonlarınızı durum çubu�
 - Android 9 (API 28) veya üzeri bir cihaz.
 - Görüntülerin diğer uygulamaların üzerinde gösterilebilmesi için "Erişilebilirlik" (Accessibility) izni.
 
+## Yasal Uyarı (Disclaimer)
+
+Bu uygulama ("StatusBar Companion") tamamen olduğu gibi ("as is") sağlanmaktadır. Geliştirici, uygulamanın kullanımı, yanlış kullanımı, cihaz performansına etkileri, diğer uygulamalarla olası çakışmaları veya donanımsal/yazılımsal hatalar nedeniyle doğabilecek doğrudan, dolaylı veya tesadüfi hiçbir zarardan sorumlu tutulamaz. Uygulamayı kurarak ve kullanarak tüm sorumluluğu kendi üzerinize aldığınızı kabul etmiş olursunuz.
+
 ## Lisans
 
-Bu proje kişisel kullanım amacıyla geliştirilmiştir.
+Bu proje **GNU Genel Kamu Lisansı sürüm 3 (GPL-3.0)** altında lisanslanmıştır. 
+Herkes kodu incelemekte, değiştirmekte ve dağıtmakta özgürdür; ancak değiştirilmiş veya türetilmiş çalışmaların da aynı açık kaynak lisansı (GPL-3.0) ile dağıtılması zorunludur. Daha fazla bilgi için [LICENSE](LICENSE) dosyasına veya [GNU lisans sayfasına](https://www.gnu.org/licenses/gpl-3.0.html) bakabilirsiniz.
