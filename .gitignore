@@ -17,3 +17,5 @@ build_debug.log
 images.png
 images1.png
 /app/build
+StatusBarCompanion-v*.apk
+release_notes.md
