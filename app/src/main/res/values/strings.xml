@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StatusBar Companion</string>
+    <string name="accessibility_service_description">StatusBar Companion needs this permission to draw your custom characters over the status bar and battery icons seamlessly.</string>
+    <string name="notification_channel_name">Overlay Service</string>
+    <string name="notification_channel_desc">Keeps the status bar companion running</string>
+    <string name="notification_title">StatusBar Companion</string>
+    <string name="notification_text">Your companion is active ✨</string>
+    <string name="btn_start_service">Start Companion</string>
+    <string name="btn_stop_service">Stop Companion</string>
+    <string name="btn_add_character">Add Character</string>
+    <string name="label_no_characters">No characters yet. Tap + to add one!</string>
+    <string name="label_character_name">Character Name</string>
+    <string name="label_idle_image">Idle Image (Required)</string>
+    <string name="label_charging_image">Charging Image (Optional)</string>
+    <string name="label_low_battery_image">Low Battery Image (Optional)</string>
+    <string name="label_offset_x">X Offset (dp)</string>
+    <string name="label_offset_y">Y Offset (dp)</string>
+    <string name="label_scale">Scale</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_delete">Delete</string>
+    <string name="label_auto_start">Start on boot</string>
+    <string name="overlay_permission_title">Permission Required</string>
+    <string name="overlay_permission_message">This app needs the \"Display over other apps\" permission to show characters on your status bar.</string>
+    <string name="btn_grant_permission">Grant Permission</string>
+    <string name="label_preview">Live Preview</string>
+    <string name="label_select_image">Select Image</string>
+    <string name="label_active">Active</string>
+</resources>

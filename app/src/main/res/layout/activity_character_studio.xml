@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Character Studio"
+            android:textColor="@color/on_surface"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Live Preview Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rounded_card_bg"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_preview"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Live Screenshot Preview Container -->
+            <FrameLayout
+                android:id="@+id/preview_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:background="@color/background_dark">
+                
+                <ImageView
+                    android:id="@+id/img_screenshot_bg"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitStart" />
+                
+                <!-- Dynamic ImageViews for each OverlayElement will be added here -->
+            </FrameLayout>
+            
+            <Button
+                android:id="@+id/btn_refresh_screenshot"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:layout_gravity="end"
+                android:layout_marginTop="8dp"
+                android:text="Refresh Screenshot"
+                android:textSize="12sp"
+                android:paddingHorizontal="12dp"
+                android:background="@drawable/rounded_button_secondary"
+                android:textColor="@color/on_surface"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Theme Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Theme Name"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="6dp" />
+
+        <EditText
+            android:id="@+id/input_name"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/rounded_input_bg"
+            android:textColor="@color/on_surface"
+            android:textColorHint="@color/text_secondary"
+            android:hint="e.g., Pikachu, Rem, Kirby..."
+            android:textSize="14sp"
+            android:paddingHorizontal="16dp"
+            android:inputType="text"
+            android:maxLines="1"
+            android:importantForAutofill="no"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Layers Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+            
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Theme Elements (Layers)"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+                
+            <Button
+                android:id="@+id/btn_remove_element"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Remove"
+                android:textSize="12sp"
+                android:paddingHorizontal="12dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/rounded_button_secondary"
+                android:textColor="#FF5252"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/btn_add_element"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="+ Add"
+                android:textSize="12sp"
+                android:paddingHorizontal="12dp"
+                android:background="@drawable/rounded_button_secondary"
+                android:textColor="@color/on_surface"
+                android:textAllCaps="false" />
+        </LinearLayout>
+        
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+            <LinearLayout
+                android:id="@+id/layers_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- Idle Image (Required) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_idle_image"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/img_idle_preview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_image"
+                android:scaleType="fitCenter"
+                android:background="@drawable/rounded_input_bg"
+                android:padding="8dp"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="Idle image preview" />
+
+            <Button
+                android:id="@+id/btn_pick_idle"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:background="@drawable/rounded_button_secondary"
+                android:text="@string/label_select_image"
+                android:textColor="@color/on_surface"
+                android:textSize="13sp"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Charging Image (Optional) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_charging_image"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/img_charging_preview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_image"
+                android:scaleType="fitCenter"
+                android:background="@drawable/rounded_input_bg"
+                android:padding="8dp"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="Charging image preview" />
+
+            <Button
+                android:id="@+id/btn_pick_charging"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:background="@drawable/rounded_button_secondary"
+                android:text="@string/label_select_image"
+                android:textColor="@color/on_surface"
+                android:textSize="13sp"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Low Battery Image (Optional) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_low_battery_image"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
+
+            <ImageView
+                android:id="@+id/img_low_battery_preview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_image"
+                android:scaleType="fitCenter"
+                android:background="@drawable/rounded_input_bg"
+                android:padding="8dp"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="Low battery image preview" />
+
+            <Button
+                android:id="@+id/btn_pick_low_battery"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:background="@drawable/rounded_button_secondary"
+                android:text="@string/label_select_image"
+                android:textColor="@color/on_surface"
+                android:textSize="13sp"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Offset X Slider -->
+        <TextView
+            android:id="@+id/label_offset_x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="X Offset: 0 dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_offset_x"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="-300"
+            android:valueTo="300"
+            android:value="0"
+            android:stepSize="1"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Offset Y Slider -->
+        <TextView
+            android:id="@+id/label_offset_y"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Y Offset: 0 dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_offset_y"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="-150"
+            android:valueTo="150"
+            android:value="0"
+            android:stepSize="1"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Scale Slider -->
+        <TextView
+            android:id="@+id/label_scale"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scale: 1.0x"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slider_scale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0.5"
+            android:valueTo="3.0"
+            android:value="1.0"
+            android:stepSize="0.1"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/btn_cancel"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:background="@drawable/rounded_button_secondary"
+                android:text="@string/btn_cancel"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:paddingHorizontal="24dp"
+                android:textAllCaps="false"
+                android:layout_marginEnd="12dp" />
+
+            <Button
+                android:id="@+id/btn_save"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:background="@drawable/rounded_button_primary"
+                android:text="@string/btn_save"
+                android:textColor="@color/on_primary"
+                android:textSize="14sp"
+                android:paddingHorizontal="32dp"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Bottom spacing -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="32dp" />
+
+    </LinearLayout>
+</ScrollView>

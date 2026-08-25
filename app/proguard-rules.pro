@@ -1,0 +1,2 @@
+-keepclassmembers class com.vellli.statusbarcompanion.model.CustomCharacter { *; }
+-keep class coil.** { *; }
