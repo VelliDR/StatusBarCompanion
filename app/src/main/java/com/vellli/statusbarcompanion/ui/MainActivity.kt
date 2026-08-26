@@ -28,6 +28,8 @@ import com.vellli.statusbarcompanion.model.BarTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Main dashboard activity.
@@ -48,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerCharacters: RecyclerView
     private lateinit var labelEmpty: TextView
     private lateinit var btnAddCharacter: Button
+    private lateinit var btnImportCharacter: Button
     private lateinit var btnGrantPermission: Button
 
     // Adapter
@@ -64,6 +67,46 @@ class MainActivity : AppCompatActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* No action needed, just request */ }
+
+    // Export launcher
+    private var pendingExportTheme: BarTheme? = null
+    private val exportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        uri?.let {
+            pendingExportTheme?.let { theme ->
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val success = ImageStorageManager.exportTheme(applicationContext, theme, it)
+                    withContext(Dispatchers.Main) {
+                        if (success) {
+                            Toast.makeText(this@MainActivity, "Exported successfully", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@MainActivity, "Export failed", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Import launcher
+    private val importLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val theme = ImageStorageManager.importTheme(applicationContext, it)
+                withContext(Dispatchers.Main) {
+                    if (theme != null) {
+                        CharacterPreferences.saveCharacter(applicationContext, theme)
+                        Toast.makeText(this@MainActivity, "Imported successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Import failed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     // ─── Lifecycle ─────────────────────────────────────────────────────
 
@@ -92,13 +135,16 @@ class MainActivity : AppCompatActivity() {
         recyclerCharacters = findViewById(R.id.recycler_characters)
         labelEmpty = findViewById(R.id.label_empty)
         btnAddCharacter = findViewById(R.id.btn_add_character)
+        btnImportCharacter = findViewById(R.id.btn_import_character)
         btnGrantPermission = findViewById(R.id.btn_grant_permission)
     }
 
     private fun setupRecyclerView() {
         characterAdapter = CharacterAdapter(
             onItemClick = { character -> onCharacterTapped(character) },
-            onDeleteClick = { character -> onCharacterDelete(character) }
+            onDeleteClick = { character -> onCharacterDelete(character) },
+            onExportClick = { character -> onCharacterExport(character) },
+            onToggleActive = { character, isActive -> onToggleActive(character, isActive) }
         )
         recyclerCharacters.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
@@ -133,6 +179,11 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        // Import character
+        btnImportCharacter.setOnClickListener {
+            importLauncher.launch("application/zip")
+        }
+
         // Grant overlay permission
         btnGrantPermission.setOnClickListener {
             requestAccessibilityPermission()
@@ -143,18 +194,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeData() {
         lifecycleScope.launch {
-            // Combine characters list with active character ID
+            // Combine characters list with active character IDs
             combine(
                 CharacterPreferences.observeCharacters(applicationContext),
-                CharacterPreferences.observeActiveCharacter(applicationContext),
+                CharacterPreferences.observeActiveCharacterIds(applicationContext),
                 CharacterPreferences.observeServiceEnabled(applicationContext),
                 CharacterPreferences.observeAutoStartOnBoot(applicationContext)
-            ) { characters, activeChar, serviceEnabled, autoStart ->
-                DataState(characters, activeChar, serviceEnabled, autoStart)
+            ) { characters, activeIds, serviceEnabled, autoStart ->
+                DataState(characters, activeIds, serviceEnabled, autoStart)
             }.collectLatest { state ->
                 // Update character list
                 characterAdapter.submitList(state.characters)
-                characterAdapter.setActiveCharacterId(state.activeCharacter?.id)
+                characterAdapter.setActiveCharacterIds(state.activeIds)
 
                 // Show/hide empty state
                 if (state.characters.isEmpty()) {
@@ -189,7 +240,7 @@ class MainActivity : AppCompatActivity() {
 
     private data class DataState(
         val characters: List<BarTheme>,
-        val activeCharacter: BarTheme?,
+        val activeIds: Set<String>,
         val serviceEnabled: Boolean,
         val autoStart: Boolean
     )
@@ -197,33 +248,26 @@ class MainActivity : AppCompatActivity() {
     // ─── Character Actions ─────────────────────────────────────────────
 
     private fun onCharacterTapped(character: BarTheme) {
-        // Long-press to edit, single tap to activate
-        AlertDialog.Builder(this, R.style.Theme_StatusBarCompanion)
-            .setTitle(character.name)
-            .setItems(arrayOf("✅ Set as Active", "✏️ Edit", "❌ Cancel")) { _, which ->
-                when (which) {
-                    0 -> activateCharacter(character)
-                    1 -> editCharacter(character)
-                }
-            }
-            .show()
+        editCharacter(character)
     }
 
-    private fun activateCharacter(character: BarTheme) {
+    private fun onToggleActive(character: BarTheme, isActive: Boolean) {
         lifecycleScope.launch {
-            CharacterPreferences.setActiveCharacter(applicationContext, character.id)
+            if (isActive) {
+                CharacterPreferences.addActiveCharacter(applicationContext, character.id)
+            } else {
+                CharacterPreferences.removeActiveCharacter(applicationContext, character.id)
+            }
             // Restart overlay to apply
             if (switchService.isChecked) {
                 startOverlayService()
             }
-            runOnUiThread {
-                Toast.makeText(
-                    this@MainActivity,
-                    "${character.name} is now active! ✨",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
         }
+    }
+
+    private fun onCharacterExport(character: BarTheme) {
+        pendingExportTheme = character
+        exportLauncher.launch("${character.name}.zip")
     }
 
     private fun editCharacter(character: BarTheme) {

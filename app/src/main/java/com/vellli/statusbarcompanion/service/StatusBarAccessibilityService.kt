@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.os.BatteryManager
@@ -43,11 +44,12 @@ class StatusBarAccessibilityService : AccessibilityService() {
     private var overlayContainer: FrameLayout? = null
     private var layoutParams: WindowManager.LayoutParams? = null
 
-    private var activeTheme: BarTheme? = null
+    private var activeThemes: List<BarTheme> = emptyList()
     private var isCharging = false
     private var batteryLevel = 100
     private var isLandscape = false
     private var isScreenOn = true
+    private var isNightMode = false
 
     private lateinit var imageLoader: ImageLoader
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -94,11 +96,13 @@ class StatusBarAccessibilityService : AccessibilityService() {
                 ACTION_LIVE_PREVIEW -> {
                     val themeJson = intent.getStringExtra("EXTRA_THEME_JSON")
                     if (themeJson != null) {
-                        activeTheme = BarTheme.deserialize(themeJson)
-                        if (overlayContainer == null) {
-                            createOverlayView()
-                        } else {
-                            updateOverlayFrame()
+                        BarTheme.deserialize(themeJson)?.let { previewTheme ->
+                            activeThemes = listOf(previewTheme)
+                            if (overlayContainer == null) {
+                                createOverlayView()
+                            } else {
+                                updateOverlayFrame()
+                            }
                         }
                     }
                 }
@@ -111,16 +115,20 @@ class StatusBarAccessibilityService : AccessibilityService() {
                         return
                     }
 
-                    val newTheme = runBlocking {
-                        CharacterPreferences.getActiveCharacter(applicationContext)
+                    val newThemes = runBlocking {
+                        CharacterPreferences.getActiveCharacters(applicationContext)
                     }
-                    if (newTheme?.id != activeTheme?.id || newTheme?.serialize() != activeTheme?.serialize()) {
-                        activeTheme = newTheme
+                    
+                    val oldSerialized = activeThemes.map { it.serialize() }.sorted()
+                    val newSerialized = newThemes.map { it.serialize() }.sorted()
+                    
+                    if (oldSerialized != newSerialized) {
+                        activeThemes = newThemes
                         removeOverlayView()
-                        if (activeTheme != null) {
+                        if (activeThemes.isNotEmpty()) {
                             createOverlayView()
                         }
-                    } else if (activeTheme != null) {
+                    } else if (activeThemes.isNotEmpty()) {
                         if (overlayContainer == null) {
                             createOverlayView()
                         }
@@ -190,19 +198,31 @@ class StatusBarAccessibilityService : AccessibilityService() {
             batteryLevel = if (scale > 0) (level * 100) / scale else level
         }
 
+        val currentNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        isNightMode = currentNightMode == Configuration.UI_MODE_NIGHT_YES
+
         val isEnabled = runBlocking {
             CharacterPreferences.isServiceEnabled(applicationContext)
         }
-        activeTheme = runBlocking {
-            CharacterPreferences.getActiveCharacter(applicationContext)
+        activeThemes = runBlocking {
+            CharacterPreferences.getActiveCharacters(applicationContext)
         }
 
-        if (isEnabled && activeTheme != null) {
+        if (isEnabled && activeThemes.isNotEmpty()) {
             createOverlayView()
         }
         
         registerSystemReceiver()
         setupOrientationListener()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val newNightMode = (newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (newNightMode != isNightMode) {
+            isNightMode = newNightMode
+            updateOverlayFrame()
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -224,7 +244,7 @@ class StatusBarAccessibilityService : AccessibilityService() {
     }
 
     private fun createOverlayView() {
-        val theme = activeTheme ?: return
+        if (activeThemes.isEmpty()) return
 
         overlayContainer = FrameLayout(this).apply {
             visibility = View.VISIBLE
@@ -275,26 +295,38 @@ class StatusBarAccessibilityService : AccessibilityService() {
 
     private fun updateOverlayFrame() {
         val container = overlayContainer ?: return
-        val theme = activeTheme ?: return
+        if (activeThemes.isEmpty()) return
         if (!isScreenOn || isLandscape) return
 
         val density = resources.displayMetrics.density
 
+        // Flatten all elements across all active themes
+        val allElements = activeThemes.flatMap { it.elements }
+
         // Ensure we have the correct number of children
-        while (container.childCount < theme.elements.size) {
-            container.addView(ImageView(this).apply {
+        while (container.childCount < allElements.size) {
+            val imageView = ImageView(this).apply {
                 scaleType = ImageView.ScaleType.FIT_CENTER
-            })
+                // Initial state for entrance animation
+                alpha = 0f
+                translationY = -50f * density
+            }
+            container.addView(imageView)
         }
-        while (container.childCount > theme.elements.size) {
+        while (container.childCount > allElements.size) {
             container.removeViewAt(container.childCount - 1)
         }
 
-        for (i in theme.elements.indices) {
-            val element = theme.elements[i]
+        for (i in allElements.indices) {
+            val element = allElements[i]
             val imageView = container.getChildAt(i) as ImageView
 
             val imagePath = when {
+                isNightMode &&
+                        element.nightImagePath != null &&
+                        ImageStorageManager.imageExists(element.nightImagePath) -> {
+                    element.nightImagePath
+                }
                 batteryLevel <= 20 &&
                         element.lowBatteryImagePath != null &&
                         ImageStorageManager.imageExists(element.lowBatteryImagePath) -> {
@@ -324,8 +356,18 @@ class StatusBarAccessibilityService : AccessibilityService() {
                 if (currentTag != newTag) {
                     imageView.tag = newTag
                     imageView.load(File(imagePath), imageLoader) {
-                        crossfade(false)
+                        crossfade(true)
+                        crossfade(300)
                         size(sizePx)
+                    }
+                    
+                    // Trigger entrance animation if it's newly added (alpha == 0)
+                    if (imageView.alpha == 0f) {
+                        imageView.animate()
+                            .alpha(1f)
+                            .translationY(0f)
+                            .setDuration(400)
+                            .start()
                     }
                 }
             } else {

@@ -10,6 +10,7 @@ data class OverlayElement(
     val idleImagePath: String,
     val chargingImagePath: String? = null,
     val lowBatteryImagePath: String? = null,
+    val nightImagePath: String? = null,
     var offsetX: Int = 0,
     var offsetY: Int = 0,
     var scale: Float = 1.0f

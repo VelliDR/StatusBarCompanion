@@ -238,7 +238,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="20dp">
+            android:layout_marginBottom="16dp">
 
             <ImageView
                 android:id="@+id/img_low_battery_preview"
@@ -253,6 +253,45 @@
 
             <Button
                 android:id="@+id/btn_pick_low_battery"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:background="@drawable/rounded_button_secondary"
+                android:text="@string/label_select_image"
+                android:textColor="@color/on_surface"
+                android:textSize="13sp"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Night Image (Optional) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gece Modu Görseli (İsteğe Bağlı)"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
+
+            <ImageView
+                android:id="@+id/img_night_preview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_image"
+                android:scaleType="fitCenter"
+                android:background="@drawable/rounded_input_bg"
+                android:padding="8dp"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="Night image preview" />
+
+            <Button
+                android:id="@+id/btn_pick_night"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"

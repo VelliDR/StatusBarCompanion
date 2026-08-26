@@ -56,6 +56,7 @@ class CharacterStudioActivity : AppCompatActivity() {
     private lateinit var imgIdlePreview: ImageView
     private lateinit var imgChargingPreview: ImageView
     private lateinit var imgLowBatteryPreview: ImageView
+    private lateinit var imgNightPreview: ImageView
     private lateinit var sliderOffsetX: Slider
     private lateinit var sliderOffsetY: Slider
     private lateinit var sliderScale: Slider
@@ -89,6 +90,10 @@ class CharacterStudioActivity : AppCompatActivity() {
     private val pickLowBatteryImage = registerForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> uri?.let { handleImagePicked(it, "low_battery") } }
+
+    private val pickNightImage = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> uri?.let { handleImagePicked(it, "night") } }
 
     // ─── Lifecycle ─────────────────────────────────────────────────────
 
@@ -137,6 +142,7 @@ class CharacterStudioActivity : AppCompatActivity() {
         imgIdlePreview = findViewById(R.id.img_idle_preview)
         imgChargingPreview = findViewById(R.id.img_charging_preview)
         imgLowBatteryPreview = findViewById(R.id.img_low_battery_preview)
+        imgNightPreview = findViewById(R.id.img_night_preview)
         
         sliderOffsetX = findViewById(R.id.slider_offset_x)
         sliderOffsetY = findViewById(R.id.slider_offset_y)
@@ -189,6 +195,10 @@ class CharacterStudioActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_pick_low_battery).setOnClickListener {
             pickLowBatteryImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+
+        findViewById<Button>(R.id.btn_pick_night).setOnClickListener {
+            pickNightImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
 
         findViewById<Button>(R.id.btn_save).setOnClickListener {
@@ -292,6 +302,13 @@ class CharacterStudioActivity : AppCompatActivity() {
         } else {
             imgLowBatteryPreview.setImageResource(R.drawable.ic_image)
         }
+        
+        val nightPath = element.nightImagePath
+        if (nightPath != null && ImageStorageManager.imageExists(nightPath)) {
+            imgNightPreview.load(File(nightPath))
+        } else {
+            imgNightPreview.setImageResource(R.drawable.ic_image)
+        }
     }
 
     // ─── Image Handling ────────────────────────────────────────────────
@@ -318,6 +335,7 @@ class CharacterStudioActivity : AppCompatActivity() {
                 "idle" -> it.copy(idleImagePath = path)
                 "charging" -> it.copy(chargingImagePath = path)
                 "low_battery" -> it.copy(lowBatteryImagePath = path)
+                "night" -> it.copy(nightImagePath = path)
                 else -> it
             }
         }
@@ -456,9 +474,9 @@ class CharacterStudioActivity : AppCompatActivity() {
             CharacterPreferences.saveCharacter(applicationContext, theme)
 
             // If this is the first/only theme, auto-activate it
-            val activeTheme = CharacterPreferences.getActiveCharacter(applicationContext)
-            if (activeTheme == null) {
-                CharacterPreferences.setActiveCharacter(applicationContext, theme.id)
+            val activeThemes = CharacterPreferences.getActiveCharacters(applicationContext)
+            if (activeThemes.isEmpty()) {
+                CharacterPreferences.addActiveCharacter(applicationContext, theme.id)
             }
 
             // Notify overlay service to refresh

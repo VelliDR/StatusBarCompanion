@@ -30,7 +30,9 @@ object CharacterPreferences {
 
     // Keys
     private val KEY_CHARACTERS = stringSetPreferencesKey("characters")
-    private val KEY_ACTIVE_CHARACTER_ID = stringPreferencesKey("active_character_id")
+    private val KEY_ACTIVE_CHARACTER_IDS = stringSetPreferencesKey("active_character_ids")
+    // Legacy key for migration
+    private val KEY_LEGACY_ACTIVE_CHARACTER_ID = stringPreferencesKey("active_character_id")
     private val KEY_AUTO_START_ON_BOOT = booleanPreferencesKey("auto_start_on_boot")
     private val KEY_SERVICE_ENABLED = booleanPreferencesKey("service_enabled")
 
@@ -55,6 +57,7 @@ object CharacterPreferences {
                                     idleImagePath = old.idleImagePath,
                                     chargingImagePath = old.chargingImagePath,
                                     lowBatteryImagePath = old.lowBatteryImagePath,
+                                    nightImagePath = null,
                                     offsetX = old.offsetX,
                                     offsetY = old.offsetY,
                                     scale = old.scale
@@ -104,8 +107,14 @@ object CharacterPreferences {
             prefs[KEY_CHARACTERS] = currentSet
 
             // Clear active if it was the deleted one
-            if (prefs[KEY_ACTIVE_CHARACTER_ID] == characterId) {
-                prefs.remove(KEY_ACTIVE_CHARACTER_ID)
+            val activeIds = prefs[KEY_ACTIVE_CHARACTER_IDS]?.toMutableSet() ?: mutableSetOf()
+            if (activeIds.contains(characterId)) {
+                activeIds.remove(characterId)
+                prefs[KEY_ACTIVE_CHARACTER_IDS] = activeIds
+            }
+            // Clear legacy just in case
+            if (prefs[KEY_LEGACY_ACTIVE_CHARACTER_ID] == characterId) {
+                prefs.remove(KEY_LEGACY_ACTIVE_CHARACTER_ID)
             }
         }
     }
@@ -128,6 +137,7 @@ object CharacterPreferences {
                                 idleImagePath = old.idleImagePath,
                                 chargingImagePath = old.chargingImagePath,
                                 lowBatteryImagePath = old.lowBatteryImagePath,
+                                nightImagePath = null,
                                 offsetX = old.offsetX,
                                 offsetY = old.offsetY,
                                 scale = old.scale
@@ -141,27 +151,62 @@ object CharacterPreferences {
         }.find { it.id == characterId }
     }
 
-    // ─── Active Character ──────────────────────────────────────────────
+    // ─── Active Characters ─────────────────────────────────────────────
 
     /**
-     * Set the active character that the overlay will display.
+     * Set the active character IDs that the overlay will display.
      */
-    suspend fun setActiveCharacter(context: Context, characterId: String?) {
+    suspend fun setActiveCharacters(context: Context, characterIds: Set<String>) {
         context.dataStore.edit { prefs ->
-            if (characterId != null) {
-                prefs[KEY_ACTIVE_CHARACTER_ID] = characterId
-            } else {
-                prefs.remove(KEY_ACTIVE_CHARACTER_ID)
-            }
+            prefs[KEY_ACTIVE_CHARACTER_IDS] = characterIds
         }
     }
 
     /**
-     * Observe the active character as a Flow.
+     * Add a character to active list
      */
-    fun observeActiveCharacter(context: Context): Flow<BarTheme?> {
+    suspend fun addActiveCharacter(context: Context, characterId: String) {
+        context.dataStore.edit { prefs ->
+            val activeIds = prefs[KEY_ACTIVE_CHARACTER_IDS]?.toMutableSet() ?: mutableSetOf()
+            // Migrate legacy if present
+            prefs[KEY_LEGACY_ACTIVE_CHARACTER_ID]?.let { legacyId ->
+                activeIds.add(legacyId)
+                prefs.remove(KEY_LEGACY_ACTIVE_CHARACTER_ID)
+            }
+            activeIds.add(characterId)
+            prefs[KEY_ACTIVE_CHARACTER_IDS] = activeIds
+        }
+    }
+
+    /**
+     * Remove a character from active list
+     */
+    suspend fun removeActiveCharacter(context: Context, characterId: String) {
+        context.dataStore.edit { prefs ->
+            val activeIds = prefs[KEY_ACTIVE_CHARACTER_IDS]?.toMutableSet() ?: mutableSetOf()
+            // Migrate legacy if present
+            prefs[KEY_LEGACY_ACTIVE_CHARACTER_ID]?.let { legacyId ->
+                activeIds.add(legacyId)
+                prefs.remove(KEY_LEGACY_ACTIVE_CHARACTER_ID)
+            }
+            activeIds.remove(characterId)
+            prefs[KEY_ACTIVE_CHARACTER_IDS] = activeIds
+        }
+    }
+
+    /**
+     * Observe the active characters as a Flow.
+     */
+    fun observeActiveCharacters(context: Context): Flow<List<BarTheme>> {
         return context.dataStore.data.map { prefs ->
-            val activeId = prefs[KEY_ACTIVE_CHARACTER_ID] ?: return@map null
+            val activeIds = prefs[KEY_ACTIVE_CHARACTER_IDS]?.toMutableSet() ?: mutableSetOf()
+            // Migrate legacy if present during read
+            prefs[KEY_LEGACY_ACTIVE_CHARACTER_ID]?.let { legacyId ->
+                activeIds.add(legacyId)
+            }
+
+            if (activeIds.isEmpty()) return@map emptyList()
+            
             val serializedSet = prefs[KEY_CHARACTERS] ?: emptySet()
             serializedSet.mapNotNull { data ->
                 if (data.contains("\u001F")) {
@@ -175,6 +220,7 @@ object CharacterPreferences {
                                     idleImagePath = old.idleImagePath,
                                     chargingImagePath = old.chargingImagePath,
                                     lowBatteryImagePath = old.lowBatteryImagePath,
+                                    nightImagePath = null,
                                     offsetX = old.offsetX,
                                     offsetY = old.offsetY,
                                     scale = old.scale
@@ -185,15 +231,28 @@ object CharacterPreferences {
                 } else {
                     BarTheme.deserialize(data)
                 }
-            }.find { it.id == activeId }
+            }.filter { activeIds.contains(it.id) }
         }
     }
 
     /**
-     * Get active character (one-shot read).
+     * Observe the active character IDs directly
      */
-    suspend fun getActiveCharacter(context: Context): BarTheme? {
-        return observeActiveCharacter(context).first()
+    fun observeActiveCharacterIds(context: Context): Flow<Set<String>> {
+        return context.dataStore.data.map { prefs ->
+            val activeIds = prefs[KEY_ACTIVE_CHARACTER_IDS]?.toMutableSet() ?: mutableSetOf()
+            prefs[KEY_LEGACY_ACTIVE_CHARACTER_ID]?.let { legacyId ->
+                activeIds.add(legacyId)
+            }
+            activeIds
+        }
+    }
+
+    /**
+     * Get active characters (one-shot read).
+     */
+    suspend fun getActiveCharacters(context: Context): List<BarTheme> {
+        return observeActiveCharacters(context).first()
     }
 
     // ─── App Settings ──────────────────────────────────────────────────

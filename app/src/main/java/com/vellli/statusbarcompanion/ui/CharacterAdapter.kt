@@ -3,6 +3,7 @@ package com.vellli.statusbarcompanion.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
@@ -19,17 +20,21 @@ import java.io.File
  */
 class CharacterAdapter(
     private val onItemClick: (BarTheme) -> Unit,
-    private val onDeleteClick: (BarTheme) -> Unit
+    private val onDeleteClick: (BarTheme) -> Unit,
+    private val onExportClick: (BarTheme) -> Unit,
+    private val onToggleActive: (BarTheme, Boolean) -> Unit
 ) : ListAdapter<BarTheme, CharacterAdapter.CharacterViewHolder>(CharacterDiffCallback()) {
 
-    private var activeCharacterId: String? = null
+    private var activeCharacterIds: Set<String> = emptySet()
 
-    fun setActiveCharacterId(id: String?) {
-        val oldId = activeCharacterId
-        activeCharacterId = id
+    fun setActiveCharacterIds(ids: Set<String>) {
+        val oldIds = activeCharacterIds
+        activeCharacterIds = ids
         // Refresh changed items
         currentList.forEachIndexed { index, character ->
-            if (character.id == oldId || character.id == id) {
+            val wasActive = oldIds.contains(character.id)
+            val isActive = ids.contains(character.id)
+            if (wasActive != isActive) {
                 notifyItemChanged(index)
             }
         }
@@ -43,14 +48,15 @@ class CharacterAdapter(
 
     override fun onBindViewHolder(holder: CharacterViewHolder, position: Int) {
         val character = getItem(position)
-        holder.bind(character, character.id == activeCharacterId)
+        holder.bind(character, activeCharacterIds.contains(character.id))
     }
 
     inner class CharacterViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val imgCharacter: ImageView = itemView.findViewById(R.id.img_character)
         private val txtName: TextView = itemView.findViewById(R.id.txt_character_name)
         private val txtStatus: TextView = itemView.findViewById(R.id.txt_character_status)
-        private val badgeActive: TextView = itemView.findViewById(R.id.badge_active)
+        private val checkboxActive: CheckBox = itemView.findViewById(R.id.checkbox_active)
+        private val btnExport: ImageView = itemView.findViewById(R.id.btn_export)
         private val btnDelete: ImageView = itemView.findViewById(R.id.btn_delete)
 
         fun bind(theme: BarTheme, isActive: Boolean) {
@@ -63,10 +69,16 @@ class CharacterAdapter(
             val hasLowBattery = theme.elements.any { it.lowBatteryImagePath != null }
             if (hasCharging) statusParts.add("⚡ Charging")
             if (hasLowBattery) statusParts.add("🪫 Low Battery")
+            val hasNight = theme.elements.any { it.nightImagePath != null }
+            if (hasNight) statusParts.add("🌙 Night")
             txtStatus.text = statusParts.joinToString(" · ")
 
-            // Active badge
-            badgeActive.visibility = if (isActive) View.VISIBLE else View.GONE
+            // Checkbox handler
+            checkboxActive.setOnCheckedChangeListener(null) // Remove previous listener to avoid triggering it
+            checkboxActive.isChecked = isActive
+            checkboxActive.setOnCheckedChangeListener { _, isChecked ->
+                onToggleActive(theme, isChecked)
+            }
 
             // Load thumbnail via Coil (using first element)
             val idleFile = theme.elements.firstOrNull()?.idleImagePath?.let { File(it) }
@@ -81,6 +93,7 @@ class CharacterAdapter(
 
             // Click handlers
             itemView.setOnClickListener { onItemClick(theme) }
+            btnExport.setOnClickListener { onExportClick(theme) }
             btnDelete.setOnClickListener { onDeleteClick(theme) }
         }
     }

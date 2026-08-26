@@ -4,8 +4,14 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import com.vellli.statusbarcompanion.model.BarTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 /**
  * Manages local image storage for character assets.
@@ -89,6 +95,155 @@ object ImageStorageManager {
     fun imageExists(path: String?): Boolean {
         if (path.isNullOrBlank()) return false
         return File(path).exists()
+    }
+
+    /**
+     * Export a BarTheme to a .sbc zip file at the given SAF Uri.
+     */
+    suspend fun exportTheme(context: Context, theme: BarTheme, outputUri: Uri): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                context.contentResolver.openOutputStream(outputUri)?.use { fos ->
+                    ZipOutputStream(fos).use { zos ->
+                        // 1. Write the theme.json
+                        val jsonEntry = ZipEntry("theme.json")
+                        zos.putNextEntry(jsonEntry)
+                        zos.write(theme.serialize().toByteArray(Charsets.UTF_8))
+                        zos.closeEntry()
+
+                        // 2. Write all referenced images
+                        val allPaths = mutableSetOf<String>()
+                        theme.elements.forEach { el ->
+                            el.idleImagePath.let { allPaths.add(it) }
+                            el.chargingImagePath?.let { allPaths.add(it) }
+                            el.lowBatteryImagePath?.let { allPaths.add(it) }
+                            el.nightImagePath?.let { allPaths.add(it) }
+                        }
+
+                        allPaths.forEach { absPath ->
+                            val file = File(absPath)
+                            if (file.exists()) {
+                                val fileEntry = ZipEntry(file.name)
+                                zos.putNextEntry(fileEntry)
+                                file.inputStream().use { fis ->
+                                    fis.copyTo(zos)
+                                }
+                                zos.closeEntry()
+                            }
+                        }
+                    }
+                }
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
+    /**
+     * Import a BarTheme from a .sbc zip file at the given SAF Uri.
+     * Zip Slip vulnerability is mitigated by checking entry names.
+     */
+    suspend fun importTheme(context: Context, inputUri: Uri): BarTheme? {
+        return withContext(Dispatchers.IO) {
+            try {
+                var importedTheme: BarTheme? = null
+                val extractedFiles = mutableMapOf<String, File>()
+                
+                // We will create a temporary random directory to avoid ID collisions during extraction
+                val tempId = java.util.UUID.randomUUID().toString()
+                val targetDir = getCharacterDir(context, tempId)
+                if (!targetDir.exists()) targetDir.mkdirs()
+
+                context.contentResolver.openInputStream(inputUri)?.use { fis ->
+                    ZipInputStream(fis).use { zis ->
+                        var entry: ZipEntry? = zis.nextEntry
+                        while (entry != null) {
+                            // Zip Slip protection: ensure entry name doesn't contain path traversal
+                            val entryName = entry.name
+                            if (entryName.contains("..") || entryName.contains("/")) {
+                                zis.closeEntry()
+                                entry = zis.nextEntry
+                                continue
+                            }
+
+                            if (entryName == "theme.json") {
+                                val jsonString = zis.readBytes().toString(Charsets.UTF_8)
+                                importedTheme = BarTheme.deserialize(jsonString)
+                            } else if (entryName.endsWith(".webp") || entryName.endsWith(".gif") || entryName.endsWith(".png") || entryName.endsWith(".jpg")) {
+                                val outFile = File(targetDir, entryName)
+                                FileOutputStream(outFile).use { fos ->
+                                    zis.copyTo(fos)
+                                }
+                                extractedFiles[entryName] = outFile
+                            }
+                            zis.closeEntry()
+                            entry = zis.nextEntry
+                        }
+                    }
+                }
+
+                if (importedTheme == null) {
+                    targetDir.deleteRecursively()
+                    return@withContext null
+                }
+
+                // Give the theme a new ID so it doesn't collide with existing themes
+                val finalTheme = importedTheme!!.copy(
+                    id = java.util.UUID.randomUUID().toString(),
+                    name = "${importedTheme!!.name} (Imported)",
+                    isActive = false
+                )
+                
+                // Rename the temp directory to the new final ID
+                val finalDir = getCharacterDir(context, finalTheme.id)
+                targetDir.renameTo(finalDir)
+
+                // Update paths in the elements
+                finalTheme.elements.forEach { el ->
+                    // Function to map the old absolute path to the newly extracted file path
+                    fun remapPath(oldPath: String?): String? {
+                        if (oldPath.isNullOrBlank()) return null
+                        val fileName = File(oldPath).name
+                        return if (extractedFiles.containsKey(fileName)) {
+                            File(finalDir, fileName).absolutePath
+                        } else null
+                    }
+                    
+                    // We must update the values, but they are val in OverlayElement.
+                    // Wait, idleImagePath is val. We need to recreate the element.
+                }
+
+                // Re-map elements because paths are vals
+                finalTheme.elements = finalTheme.elements.map { el ->
+                    fun remapPath(oldPath: String?): String? {
+                        if (oldPath.isNullOrBlank()) return null
+                        val fileName = File(oldPath).name
+                        return if (extractedFiles.containsKey(fileName)) {
+                            File(finalDir, fileName).absolutePath
+                        } else null
+                    }
+                    
+                    val newIdle = remapPath(el.idleImagePath) ?: el.idleImagePath
+                    
+                    el.copy(
+                        idleImagePath = newIdle,
+                        chargingImagePath = remapPath(el.chargingImagePath),
+                        lowBatteryImagePath = remapPath(el.lowBatteryImagePath),
+                        nightImagePath = remapPath(el.nightImagePath)
+                    )
+                }.toMutableList()
+
+                // Save to DataStore
+                CharacterPreferences.saveCharacter(context, finalTheme)
+                finalTheme
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
     }
 
     /**
