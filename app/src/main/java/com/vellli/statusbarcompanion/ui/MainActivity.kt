@@ -308,13 +308,17 @@ class MainActivity : AppCompatActivity() {
         }
         
         // Notify the accessibility service to reload character and show it
-        val intent = Intent(com.vellli.statusbarcompanion.service.StatusBarAccessibilityService.ACTION_RELOAD_CHARACTER)
+        val intent = Intent(com.vellli.statusbarcompanion.service.StatusBarAccessibilityService.ACTION_RELOAD_CHARACTER).apply {
+            setPackage(packageName)
+        }
         sendBroadcast(intent)
     }
 
     private fun stopOverlayService() {
         // Send intent to hide it, or just let data store handle it
-        val intent = Intent(com.vellli.statusbarcompanion.service.StatusBarAccessibilityService.ACTION_RELOAD_CHARACTER)
+        val intent = Intent(com.vellli.statusbarcompanion.service.StatusBarAccessibilityService.ACTION_RELOAD_CHARACTER).apply {
+            setPackage(packageName)
+        }
         sendBroadcast(intent)
     }
 

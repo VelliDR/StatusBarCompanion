@@ -157,8 +157,10 @@ class StatusBarAccessibilityService : AccessibilityService() {
                                         bitmap.recycle()
                                         screenshot.hardwareBuffer.close()
                                         
-                                        val readyIntent = Intent(ACTION_SCREENSHOT_READY)
-                                        readyIntent.putExtra("EXTRA_SCREENSHOT_PATH", file.absolutePath)
+                                        val readyIntent = Intent(ACTION_SCREENSHOT_READY).apply {
+                                            setPackage(packageName)
+                                            putExtra("EXTRA_SCREENSHOT_PATH", file.absolutePath)
+                                        }
                                         sendBroadcast(readyIntent)
                                     }
                                 }

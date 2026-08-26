@@ -220,7 +220,9 @@ class CharacterStudioActivity : AppCompatActivity() {
         startActivity(homeIntent)
         
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            sendBroadcast(Intent(StatusBarAccessibilityService.ACTION_REQUEST_SCREENSHOT))
+            sendBroadcast(Intent(StatusBarAccessibilityService.ACTION_REQUEST_SCREENSHOT).apply {
+                setPackage(packageName)
+            })
             
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 val returnIntent = Intent(this, CharacterStudioActivity::class.java).apply {
@@ -427,6 +429,7 @@ class CharacterStudioActivity : AppCompatActivity() {
                             )
                             val intent = Intent(StatusBarAccessibilityService.ACTION_LIVE_PREVIEW).apply {
                                 putExtra("EXTRA_THEME_JSON", activeThemePreview.serialize())
+                                setPackage(packageName)
                             }
                             sendBroadcast(intent)
                             true
@@ -445,6 +448,7 @@ class CharacterStudioActivity : AppCompatActivity() {
         )
         val intent = Intent(StatusBarAccessibilityService.ACTION_LIVE_PREVIEW).apply {
             putExtra("EXTRA_THEME_JSON", activeThemePreview.serialize())
+            setPackage(packageName)
         }
         sendBroadcast(intent)
     }
@@ -517,7 +521,9 @@ class CharacterStudioActivity : AppCompatActivity() {
     // ─── Service Restart Helper ────────────────────────────────────────
 
     private fun restartOverlayIfRunning() {
-        val intent = Intent(StatusBarAccessibilityService.ACTION_RELOAD_CHARACTER)
+        val intent = Intent(StatusBarAccessibilityService.ACTION_RELOAD_CHARACTER).apply {
+            setPackage(packageName)
+        }
         sendBroadcast(intent)
     }
 }
